@@ -3,7 +3,25 @@ from ultralytics import YOLO
 model = YOLO("best.pt")
 
 
-def check_forward_centering(result, image_width, tolerance=0.1):
+class PredictionResult:
+    def __init__(self, direction, is_centered,  displacement, confidence):
+        self.direction = direction
+        self.is_centered = is_centered
+        self.displacement = displacement
+        self.confidence = confidence
+
+    def where_to_go(self):
+        if (self.is_centered):
+            return "forward"
+        if (self.displacement > 0):
+            return "right"
+        return "left"
+
+    def __str__(self):
+        return f"Direction: {self.direction}, Is Centered: {self.is_centered},  Displacement: {self.displacement}, Confidence: {self.confidence}"
+
+
+def check_forward_centering(result, image_width, tolerance=0.1) -> PredictionResult:
     """
     Check if detected 'forward' classes are centered and calculate displacement.
 
@@ -37,33 +55,25 @@ def check_forward_centering(result, image_width, tolerance=0.1):
             is_centered = abs(displacement) <= (image_width * tolerance)
 
             # Add information to the list
-            centering_info.append({
-                'is_centered': is_centered,
-                'displacement': displacement,
-                'confidence': float(box.conf[0])
-            })
+            centering_info.append(
+                PredictionResult(
+                    direction="forward",
+                    confidence=float(box.conf[0]),
+                    is_centered=is_centered,
+                    displacement=displacement,
+                )
+            )
 
-    return centering_info
+    return max(centering_info, key=lambda x: x.confidence)
 
 
 def process(image):
     results = model(image)
     image_width = results[0].orig_shape[1]  # Get the original image width
 
-    for result in results:
-        centering_info = check_forward_centering(result, image_width)
+    result = results[0]
 
-        if centering_info:
-            for info in centering_info:
+    most_confident = check_forward_centering(result, image_width)
+    result.save(filename="res.jpg")
 
-                displacement = round(info['displacement'])*(326/10)
-
-                if (info['confidence'] > 0.9):
-                    pass
-
-                print(f"  Centered: {info['is_centered']}")
-                print(f"  Displacement: {info['displacement']:.2f} pixels")
-                print(f"  Confidence: {info['confidence']:.2f}")
-                print("---")
-        else:
-            print("No 'forward' objects detected.")
+    return most_confident.where_to_go()
