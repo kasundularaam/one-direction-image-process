@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Training ZIGGY</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="title">Training ZIGGY</h1>
+
+      <div id="error-message" style="display: none"></div>
+      <div id="connection-status">Connecting to server...</div>
+
+      <div class="main-content">
+        <div class="left-column">
+          <div class="image-container">
+            <img
+              id="processed-image"
+              style="display: none"
+              alt="Processed image"
+            />
+          </div>
+
+          <div class="button-group">
+            <button onclick="sendDirection('left')" disabled id="btn-left">
+              Left
+            </button>
+            <button
+              onclick="sendDirection('forward')"
+              disabled
+              id="btn-forward"
+            >
+              Forward
+            </button>
+            <button onclick="sendDirection('right')" disabled id="btn-right">
+              Right
+            </button>
+          </div>
+        </div>
+
+        <div class="right-column">
+          <div class="results" id="results">
+            <h3>Detection Results</h3>
+            <p>Waiting for image...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Previous JavaScript code remains the same
+      const buttons = ["btn-left", "btn-forward", "btn-right"];
+      let ws;
+
+      function connectWebSocket() {
+        ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+        ws.onopen = () => {
+          document.getElementById("connection-status").textContent =
+            "Connected to server";
+          document.getElementById("connection-status").style.color = "green";
+        };
+
+        ws.onclose = () => {
+          document.getElementById("connection-status").textContent =
+            "Disconnected from server. Reconnecting...";
+          document.getElementById("connection-status").style.color = "orange";
+          setTimeout(connectWebSocket, 3000);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.status === "waiting_direction") {
+              handleNewImage(data);
+            }
+          } catch (error) {
+            showError("Error processing server data");
+          }
+        };
+      }
+
+      function showError(message) {
+        const errorEl = document.getElementById("error-message");
+        errorEl.textContent = message;
+        errorEl.style.display = "block";
+        setTimeout(() => {
+          errorEl.style.display = "none";
+        }, 5000);
+      }
+
+      function handleNewImage(data) {
+        // Display image
+        const img = document.getElementById("processed-image");
+        img.src = `/temp_images/${data.image_id}`;
+        img.style.display = "block";
+
+        // Enable buttons
+        buttons.forEach((btnId) => {
+          document.getElementById(btnId).disabled = false;
+        });
+
+        // Update status and results
+        document.getElementById("connection-status").textContent =
+          "Please select a direction";
+
+        // Display detection results
+        const resultsDiv = document.getElementById("results");
+        let resultsHtml = `
+                <h3>Detection Results</h3>
+                <p>Arrow Count: ${data.arrow_count}</p>
+            `;
+
+        if (data.arrow_count > 0) {
+          resultsHtml += `
+                    <p>Arrow 1: ${data.arrow_label1} (${(
+            data.confidence1 * 100
+          ).toFixed(1)}%)</p>
+                `;
+        }
+        if (data.arrow_count > 1) {
+          resultsHtml += `
+                    <p>Arrow 2: ${data.arrow_label2} (${(
+            data.confidence2 * 100
+          ).toFixed(1)}%)</p>
+                `;
+        }
+        if (data.arrow_count > 2) {
+          resultsHtml += `
+                    <p>Arrow 3: ${data.arrow_label3} (${(
+            data.confidence3 * 100
+          ).toFixed(1)}%)</p>
+                `;
+        }
+
+        resultsDiv.innerHTML = resultsHtml;
+      }
+
+      async function sendDirection(direction) {
+        try {
+          // Disable buttons
+          buttons.forEach((btnId) => {
+            document.getElementById(btnId).disabled = true;
+          });
+
+          const response = await fetch(
+            `/update_direction?direction=${direction}`,
+            {
+              method: "POST",
+            }
+          );
+
+          if (!response.ok) throw new Error("Failed to update direction");
+
+          document.getElementById("connection-status").textContent =
+            "Direction set, waiting for next image...";
+        } catch (error) {
+          showError(error.message);
+          // Re-enable buttons on error
+          buttons.forEach((btnId) => {
+            document.getElementById(btnId).disabled = false;
+          });
+        }
+      }
+
+      // Start WebSocket connection when page loads
+      connectWebSocket();
+    </script>
+  </body>
+</html>
