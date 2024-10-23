@@ -1,56 +1,111 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Training ZIGGY</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+    <title>Training ZIGGI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#3B82F6",
+              secondary: "#1E40AF",
+              accent: "#60A5FA",
+            },
+          },
+        },
+      };
+    </script>
   </head>
-  <body>
-    <div class="container">
-      <h1 class="title">Training ZIGGY</h1>
+  <body class="bg-gray-900 text-white h-full">
+    <div class="h-full flex flex-col">
+      <header class="bg-gray-800 border-b border-gray-700 py-2">
+        <div class="container mx-auto px-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-2xl font-bold text-primary">Training ZIGGI</h1>
+              <div id="connection-status" class="text-yellow-500 text-sm">
+                Connecting to server...
+              </div>
+            </div>
+            <div
+              id="error-message"
+              class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded-lg"
+            ></div>
+          </div>
+        </div>
+      </header>
 
-      <div id="error-message" style="display: none"></div>
-      <div id="connection-status">Connecting to server...</div>
-
-      <div class="main-content">
-        <div class="left-column">
-          <div class="image-container">
-            <img
-              id="processed-image"
-              style="display: none"
-              alt="Processed image"
-            />
+      <main class="flex-1 container mx-auto px-4 py-2 flex gap-4 min-h-0">
+        <!-- Left Column -->
+        <div
+          class="flex-grow bg-gray-800 rounded-xl shadow-2xl p-4 flex flex-col"
+        >
+          <div class="flex-1 min-h-0">
+            <div class="h-full w-full bg-gray-700 rounded-lg relative">
+              <img
+                id="processed-image"
+                class="hidden h-full w-full object-contain rounded-lg"
+                alt="Processed image"
+              />
+              <div class="absolute inset-0 flex items-center justify-center">
+                <p class="text-gray-400" id="image-placeholder">
+                  Waiting for image...
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div class="button-group">
-            <button onclick="sendDirection('left')" disabled id="btn-left">
+          <div class="flex justify-center gap-4 mt-4">
+            <button
+              onclick="sendDirection('left')"
+              id="btn-left"
+              disabled
+              class="bg-primary hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+            >
               Left
             </button>
             <button
               onclick="sendDirection('forward')"
-              disabled
               id="btn-forward"
+              disabled
+              class="bg-primary hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2 rounded-lg font-medium transition-colors duration-200"
             >
               Forward
             </button>
-            <button onclick="sendDirection('right')" disabled id="btn-right">
+            <button
+              onclick="sendDirection('right')"
+              id="btn-right"
+              disabled
+              class="bg-primary hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+            >
               Right
             </button>
           </div>
         </div>
 
-        <div class="right-column">
+        <!-- Right Column -->
+        <div class="w-80 bg-gray-800 rounded-xl shadow-lg p-4 overflow-auto">
           <div class="results" id="results">
-            <h3>Detection Results</h3>
-            <p>Waiting for image...</p>
+            <h3 class="text-lg font-semibold text-primary mb-2">
+              Detection Results
+            </h3>
+            <p class="text-gray-300">Waiting for image...</p>
           </div>
         </div>
-      </div>
+      </main>
+
+      <footer class="bg-gray-800 border-t border-gray-700 py-2">
+        <div class="container mx-auto px-4 text-center">
+          <p class="text-gray-400 text-sm">ZIGGI Training Interface</p>
+        </div>
+      </footer>
     </div>
 
     <script>
-      // Previous JavaScript code remains the same
       const buttons = ["btn-left", "btn-forward", "btn-right"];
       let ws;
 
@@ -60,13 +115,15 @@
         ws.onopen = () => {
           document.getElementById("connection-status").textContent =
             "Connected to server";
-          document.getElementById("connection-status").style.color = "green";
+          document.getElementById("connection-status").className =
+            "text-green-500 text-sm";
         };
 
         ws.onclose = () => {
           document.getElementById("connection-status").textContent =
             "Disconnected from server. Reconnecting...";
-          document.getElementById("connection-status").style.color = "orange";
+          document.getElementById("connection-status").className =
+            "text-yellow-500 text-sm";
           setTimeout(connectWebSocket, 3000);
         };
 
@@ -85,9 +142,9 @@
       function showError(message) {
         const errorEl = document.getElementById("error-message");
         errorEl.textContent = message;
-        errorEl.style.display = "block";
+        errorEl.classList.remove("hidden");
         setTimeout(() => {
-          errorEl.style.display = "none";
+          errorEl.classList.add("hidden");
         }, 5000);
       }
 
@@ -95,46 +152,66 @@
         // Display image
         const img = document.getElementById("processed-image");
         img.src = `/temp_images/${data.image_id}`;
-        img.style.display = "block";
+        img.classList.remove("hidden");
+        document.getElementById("image-placeholder").classList.add("hidden");
 
         // Enable buttons
         buttons.forEach((btnId) => {
           document.getElementById(btnId).disabled = false;
         });
 
-        // Update status and results
+        // Update status
         document.getElementById("connection-status").textContent =
           "Please select a direction";
+        document.getElementById("connection-status").className =
+          "text-blue-500 text-sm";
 
         // Display detection results
         const resultsDiv = document.getElementById("results");
         let resultsHtml = `
-                <h3>Detection Results</h3>
-                <p>Arrow Count: ${data.arrow_count}</p>
+                <h3 class="text-lg font-semibold text-primary mb-2">Detection Results</h3>
+                <div class="space-y-2">
+                    <p class="text-gray-300">Arrow Count: ${data.arrow_count}</p>
             `;
 
         if (data.arrow_count > 0) {
           resultsHtml += `
-                    <p>Arrow 1: ${data.arrow_label1} (${(
-            data.confidence1 * 100
-          ).toFixed(1)}%)</p>
+                    <div class="bg-gray-700/50 p-2 rounded">
+                        <p class="text-gray-300">Arrow 1: <span class="text-accent">${
+                          data.arrow_label1
+                        }</span> 
+                        <span class="text-gray-400">(${(
+                          data.confidence1 * 100
+                        ).toFixed(1)}%)</span></p>
+                    </div>
                 `;
         }
         if (data.arrow_count > 1) {
           resultsHtml += `
-                    <p>Arrow 2: ${data.arrow_label2} (${(
-            data.confidence2 * 100
-          ).toFixed(1)}%)</p>
+                    <div class="bg-gray-700/50 p-2 rounded">
+                        <p class="text-gray-300">Arrow 2: <span class="text-accent">${
+                          data.arrow_label2
+                        }</span>
+                        <span class="text-gray-400">(${(
+                          data.confidence2 * 100
+                        ).toFixed(1)}%)</span></p>
+                    </div>
                 `;
         }
         if (data.arrow_count > 2) {
           resultsHtml += `
-                    <p>Arrow 3: ${data.arrow_label3} (${(
-            data.confidence3 * 100
-          ).toFixed(1)}%)</p>
+                    <div class="bg-gray-700/50 p-2 rounded">
+                        <p class="text-gray-300">Arrow 3: <span class="text-accent">${
+                          data.arrow_label3
+                        }</span>
+                        <span class="text-gray-400">(${(
+                          data.confidence3 * 100
+                        ).toFixed(1)}%)</span></p>
+                    </div>
                 `;
         }
 
+        resultsHtml += "</div>";
         resultsDiv.innerHTML = resultsHtml;
       }
 
@@ -156,6 +233,8 @@
 
           document.getElementById("connection-status").textContent =
             "Direction set, waiting for next image...";
+          document.getElementById("connection-status").className =
+            "text-yellow-500 text-sm";
         } catch (error) {
           showError(error.message);
           // Re-enable buttons on error
